@@ -1,12 +1,12 @@
-# One ephemeral environment per dev/* branch.
+# One ephemeral environment per staging branch (staging or staging/*).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: demo-dev
+namespace: demo-staging
 resources:
   - ../base/ephemeral
 labels:
   - pairs:
-      environment: dev
+      environment: staging
     includeSelectors: false
 patches:
   - target:
@@ -15,10 +15,10 @@ patches:
     patch: |
       - op: replace
         path: /spec/filter/includeBranch
-        value: "^dev/.+"
+        value: "^staging(/.+)?$"
       - op: replace
         path: /spec/defaultValues/env
-        value: dev
+        value: staging
       - op: replace
         path: /spec/defaultValues/replicas
-        value: 1
+        value: 2

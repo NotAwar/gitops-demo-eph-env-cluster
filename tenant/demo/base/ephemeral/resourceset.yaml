@@ -1,23 +1,23 @@
-# Renders an isolated ephemeral environment for every dev/* branch of the workload repo.
+# Renders an isolated ephemeral environment for every matching branch of the workload repo.
 # Deleting the branch garbage-collects the whole namespace.
 apiVersion: fluxcd.controlplane.io/v1
 kind: ResourceSet
 metadata:
-  name: workload-dev-envs
-  namespace: demo-dev
+  name: workload-envs
+  namespace: demo-ephemeral
 spec:
   inputsFrom:
     - apiVersion: fluxcd.controlplane.io/v1
       kind: ResourceSetInputProvider
-      name: workload-dev-branches
+      name: workload-branches
   resources:
     - apiVersion: v1
       kind: Namespace
       metadata:
-        name: << inputs.tenant >>-dev-<< inputs.id >>
+        name: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
         labels:
           tenant: << inputs.tenant | quote >>
-          environment: dev
+          environment: << inputs.env | quote >>
           ephemeral: "true"
         annotations:
           fluxcd.controlplane.io/branch: << inputs.branch | quote >>
@@ -26,12 +26,12 @@ spec:
       kind: ServiceAccount
       metadata:
         name: flux
-        namespace: << inputs.tenant >>-dev-<< inputs.id >>
+        namespace: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
     - apiVersion: rbac.authorization.k8s.io/v1
       kind: RoleBinding
       metadata:
         name: flux
-        namespace: << inputs.tenant >>-dev-<< inputs.id >>
+        namespace: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
       roleRef:
         apiGroup: rbac.authorization.k8s.io
         kind: ClusterRole
@@ -39,12 +39,12 @@ spec:
       subjects:
         - kind: ServiceAccount
           name: flux
-          namespace: << inputs.tenant >>-dev-<< inputs.id >>
+          namespace: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
     - apiVersion: v1
       kind: ResourceQuota
       metadata:
         name: ephemeral-quota
-        namespace: << inputs.tenant >>-dev-<< inputs.id >>
+        namespace: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
       spec:
         hard:
           requests.cpu: "1"
@@ -57,7 +57,7 @@ spec:
       kind: LimitRange
       metadata:
         name: ephemeral-defaults
-        namespace: << inputs.tenant >>-dev-<< inputs.id >>
+        namespace: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
       spec:
         limits:
           - type: Container
@@ -71,7 +71,7 @@ spec:
       kind: GitRepository
       metadata:
         name: workload
-        namespace: << inputs.tenant >>-dev-<< inputs.id >>
+        namespace: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
       spec:
         interval: 10m
         url: << inputs.repo >>
@@ -81,7 +81,7 @@ spec:
       kind: Kustomization
       metadata:
         name: workload
-        namespace: << inputs.tenant >>-dev-<< inputs.id >>
+        namespace: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
         annotations:
           event.toolkit.fluxcd.io/branch: << inputs.branch | quote >>
           event.toolkit.fluxcd.io/commit: << inputs.sha | quote >>
@@ -96,11 +96,11 @@ spec:
           kind: GitRepository
           name: workload
         path: << inputs.path >>
-        targetNamespace: << inputs.tenant >>-dev-<< inputs.id >>
-        # Platform-owned dev overlay applied on top of the workload base.
+        targetNamespace: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
+        # Platform-owned environment overlay applied on top of the workload base.
         commonMetadata:
           labels:
-            environment: dev
+            environment: << inputs.env | quote >>
             ephemeral: "true"
         patches:
           - target:
@@ -108,10 +108,10 @@ spec:
             patch: |
               - op: add
                 path: /spec/replicas
-                value: 1
+                value: << inputs.replicas >>
         postBuild:
           substitute:
             ENV_ID: << inputs.id | quote >>
-            ENV_NAMESPACE: << inputs.tenant >>-dev-<< inputs.id >>
+            ENV_NAMESPACE: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
             GIT_BRANCH: << inputs.branch | quote >>
             GIT_SHA: << inputs.sha | quote >>

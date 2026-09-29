@@ -1,0 +1,8 @@
+# Long-lived test environment tracking the workload repo's `test` branch.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - rbac.yaml
+  - guardrails.yaml
+  - sync.yaml

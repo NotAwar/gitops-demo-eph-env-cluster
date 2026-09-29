@@ -13,3 +13,51 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tenant-demo-test
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  path: ./tenant/demo/test
+  prune: true
+  wait: true
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tenant-demo-staging
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  path: ./tenant/demo/staging
+  prune: true
+  wait: true
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tenant-demo-prod
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  path: ./tenant/demo/prod
+  prune: true
+  wait: true
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system

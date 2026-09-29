@@ -1,18 +1,21 @@
-# Discovers developer branches (dev/*) in the workload repo; one ephemeral env per branch.
+# Discovers branches in the workload repo; one ephemeral env per branch.
+# includeBranch, env and replicas are set per environment overlay.
 apiVersion: fluxcd.controlplane.io/v1
 kind: ResourceSetInputProvider
 metadata:
-  name: workload-dev-branches
-  namespace: demo-dev
+  name: workload-branches
+  namespace: demo-ephemeral
   annotations:
     fluxcd.controlplane.io/reconcileEvery: "2m"
 spec:
   type: GitHubBranch
   url: https://github.com/NotAwar/gitops-demo-eph-env-workload
   filter:
-    includeBranch: "^dev/.*"
+    includeBranch: "^$"
     limit: 20
   defaultValues:
     tenant: demo
+    env: ephemeral
+    replicas: 1
     repo: https://github.com/NotAwar/gitops-demo-eph-env-workload.git
     path: ./deploy/base

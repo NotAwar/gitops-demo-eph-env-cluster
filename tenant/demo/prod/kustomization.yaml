@@ -1,0 +1,5 @@
+# Production tracks the workload repo's main branch using its own prod overlay.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - sync.yaml
