@@ -1,8 +1,24 @@
-# Long-lived test environment tracking the workload repo's `test` branch.
+# Environment for the workload repo's `test` branch.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+namespace: demo-test
 resources:
-  - namespace.yaml
-  - rbac.yaml
-  - guardrails.yaml
-  - sync.yaml
+  - ../base/ephemeral
+labels:
+  - pairs:
+      environment: test
+    includeSelectors: false
+patches:
+  - target:
+      kind: ResourceSetInputProvider
+      name: workload-branches
+    patch: |
+      - op: replace
+        path: /spec/filter/includeBranch
+        value: "^test$"
+      - op: replace
+        path: /spec/defaultValues/env
+        value: test
+      - op: replace
+        path: /spec/defaultValues/replicas
+        value: 1

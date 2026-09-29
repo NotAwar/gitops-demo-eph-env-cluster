@@ -5,12 +5,13 @@ Platform (cluster) repo. Application manifests live in
 
 ## Environments
 
-| Env     | Workload branch          | Namespace              | Source path     | Replicas |
-|---------|--------------------------|------------------------|-----------------|----------|
-| dev     | `dev/*` (one env each)   | `demo-dev-<id>`        | `deploy/base`   | 1        |
-| staging | `staging`, `staging/*`   | `demo-staging-<id>`    | `deploy/base`   | 2        |
-| test    | `test`                   | `demo-test`            | `deploy/base`   | 1        |
-| prod    | `main`                   | `star-wars`            | `deploy/prod`   | 2        |
+| Env     | Example branch   | Namespace                  | Source path   | Replicas |
+|---------|------------------|----------------------------|---------------|----------|
+| dev     | `dev/login`      | `star-wars-dev-login`      | `deploy/base` | 1        |
+| staging | `staging`        | `star-wars-staging`        | `deploy/base` | 2        |
+| staging | `staging/rc1`    | `star-wars-staging-rc1`    | `deploy/base` | 2        |
+| test    | `test`           | `star-wars-test`           | `deploy/base` | 1        |
+| prod    | `main`           | `star-wars`                | `deploy/prod` | 2        |
 
 ## Layout
 
@@ -21,14 +22,14 @@ clusters/kind/tenants.yaml                    # one Flux Kustomization per tenan
 tenant/demo/base/ephemeral/                   # shared branch-per-env machinery (input provider + ResourceSet)
 tenant/demo/dev/                              # overlay: dev/* branches
 tenant/demo/staging/                          # overlay: staging branches
-tenant/demo/test/                             # static env tracking the test branch
+tenant/demo/test/                             # overlay: test branch
 tenant/demo/prod/                             # static env tracking main with the workload prod overlay
 ```
 
-## Ephemeral environments (dev, staging)
+## Branch environments (dev, staging, test)
 
 Every matching branch in the workload repo gets its own namespace
-`demo-<env>-<id>` containing:
+`<app>-<env>[-<branch suffix>]` (`app` = the workload's prod namespace) containing:
 
 - a scoped `flux` ServiceAccount (namespace `admin` only)
 - `ResourceQuota` and `LimitRange` guardrails
@@ -37,7 +38,7 @@ Every matching branch in the workload repo gets its own namespace
   applies the platform overlay (replicas, `environment` label,
   `${ENV_ID}`, `${ENV_NAMESPACE}`, `${GIT_BRANCH}`, `${GIT_SHA}` substitutions)
 
-Deleting the branch removes the whole environment.
+Deleting the branch deletes the namespace and everything in it.
 
 Workload repo contract: a namespace-agnostic kustomize base at `deploy/base`
 and a prod overlay at `deploy/prod`.

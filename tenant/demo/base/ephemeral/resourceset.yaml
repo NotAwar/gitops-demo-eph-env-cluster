@@ -1,4 +1,5 @@
-# Renders an isolated ephemeral environment for every matching branch of the workload repo.
+# Renders an isolated environment for every matching branch of the workload repo.
+# Namespace: <app>-<env>[-<branch suffix>], e.g. dev/login -> star-wars-dev-login, test -> star-wars-test.
 # Deleting the branch garbage-collects the whole namespace.
 apiVersion: fluxcd.controlplane.io/v1
 kind: ResourceSet
@@ -10,108 +11,121 @@ spec:
     - apiVersion: fluxcd.controlplane.io/v1
       kind: ResourceSetInputProvider
       name: workload-branches
-  resources:
-    - apiVersion: v1
-      kind: Namespace
-      metadata:
-        name: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
+  resourcesTemplate: |
+    <<- $suffix := lower (regexReplaceAll "^[^/]+/?" inputs.branch "") >>
+    <<- $suffix = trimAll "-" (regexReplaceAll "[^a-z0-9]+" $suffix "-") >>
+    <<- $ns := printf "%s-%s" inputs.app inputs.env >>
+    <<- if $suffix >><< $ns = printf "%s-%s" $ns $suffix >><< end >>
+    <<- $ns = trimSuffix "-" (trunc 63 $ns) >>
+    ---
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: << $ns >>
+      labels:
+        tenant: << inputs.tenant | quote >>
+        app: << inputs.app | quote >>
+        environment: << inputs.env | quote >>
+        ephemeral: "true"
+      annotations:
+        fluxcd.controlplane.io/branch: << inputs.branch | quote >>
+        fluxcd.controlplane.io/commit: << inputs.sha | quote >>
+    ---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: flux
+      namespace: << $ns >>
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: flux
+      namespace: << $ns >>
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: admin
+    subjects:
+      - kind: ServiceAccount
+        name: flux
+        namespace: << $ns >>
+    ---
+    apiVersion: v1
+    kind: ResourceQuota
+    metadata:
+      name: ephemeral-quota
+      namespace: << $ns >>
+    spec:
+      hard:
+        requests.cpu: "1"
+        requests.memory: 1Gi
+        limits.cpu: "2"
+        limits.memory: 2Gi
+        pods: "10"
+        services.loadbalancers: "0"
+    ---
+    apiVersion: v1
+    kind: LimitRange
+    metadata:
+      name: ephemeral-defaults
+      namespace: << $ns >>
+    spec:
+      limits:
+        - type: Container
+          default:
+            cpu: 200m
+            memory: 256Mi
+          defaultRequest:
+            cpu: 50m
+            memory: 64Mi
+    ---
+    apiVersion: source.toolkit.fluxcd.io/v1
+    kind: GitRepository
+    metadata:
+      name: workload
+      namespace: << $ns >>
+    spec:
+      interval: 10m
+      url: << inputs.repo >>
+      ref:
+        commit: << inputs.sha >>
+    ---
+    apiVersion: kustomize.toolkit.fluxcd.io/v1
+    kind: Kustomization
+    metadata:
+      name: workload
+      namespace: << $ns >>
+      annotations:
+        event.toolkit.fluxcd.io/branch: << inputs.branch | quote >>
+        event.toolkit.fluxcd.io/commit: << inputs.sha | quote >>
+    spec:
+      serviceAccountName: flux
+      interval: 10m
+      retryInterval: 1m
+      timeout: 3m
+      prune: true
+      wait: true
+      sourceRef:
+        kind: GitRepository
+        name: workload
+      path: << inputs.path >>
+      targetNamespace: << $ns >>
+      # Platform-owned environment overlay applied on top of the workload base.
+      commonMetadata:
         labels:
-          tenant: << inputs.tenant | quote >>
           environment: << inputs.env | quote >>
           ephemeral: "true"
-        annotations:
-          fluxcd.controlplane.io/branch: << inputs.branch | quote >>
-          fluxcd.controlplane.io/commit: << inputs.sha | quote >>
-    - apiVersion: v1
-      kind: ServiceAccount
-      metadata:
-        name: flux
-        namespace: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
-    - apiVersion: rbac.authorization.k8s.io/v1
-      kind: RoleBinding
-      metadata:
-        name: flux
-        namespace: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
-      roleRef:
-        apiGroup: rbac.authorization.k8s.io
-        kind: ClusterRole
-        name: admin
-      subjects:
-        - kind: ServiceAccount
-          name: flux
-          namespace: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
-    - apiVersion: v1
-      kind: ResourceQuota
-      metadata:
-        name: ephemeral-quota
-        namespace: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
-      spec:
-        hard:
-          requests.cpu: "1"
-          requests.memory: 1Gi
-          limits.cpu: "2"
-          limits.memory: 2Gi
-          pods: "10"
-          services.loadbalancers: "0"
-    - apiVersion: v1
-      kind: LimitRange
-      metadata:
-        name: ephemeral-defaults
-        namespace: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
-      spec:
-        limits:
-          - type: Container
-            default:
-              cpu: 200m
-              memory: 256Mi
-            defaultRequest:
-              cpu: 50m
-              memory: 64Mi
-    - apiVersion: source.toolkit.fluxcd.io/v1
-      kind: GitRepository
-      metadata:
-        name: workload
-        namespace: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
-      spec:
-        interval: 10m
-        url: << inputs.repo >>
-        ref:
-          commit: << inputs.sha >>
-    - apiVersion: kustomize.toolkit.fluxcd.io/v1
-      kind: Kustomization
-      metadata:
-        name: workload
-        namespace: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
-        annotations:
-          event.toolkit.fluxcd.io/branch: << inputs.branch | quote >>
-          event.toolkit.fluxcd.io/commit: << inputs.sha | quote >>
-      spec:
-        serviceAccountName: flux
-        interval: 10m
-        retryInterval: 1m
-        timeout: 3m
-        prune: true
-        wait: true
-        sourceRef:
-          kind: GitRepository
-          name: workload
-        path: << inputs.path >>
-        targetNamespace: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
-        # Platform-owned environment overlay applied on top of the workload base.
-        commonMetadata:
-          labels:
-            environment: << inputs.env | quote >>
-            ephemeral: "true"
-        patches:
-          - target:
-              kind: Deployment
-            patch: |
-              - op: add
-                path: /spec/replicas
-                value: << inputs.replicas >>
-        postBuild:
-          substitute:
-            ENV_ID: << inputs.id | quote >>
-            ENV_NAMESPACE: << inputs.tenant >>-<< inputs.env >>-<< inputs.id >>
-            GIT_BRANCH: << inputs.branch | quote >>
-            GIT_SHA: << inputs.sha | quote >>
+      patches:
+        - target:
+            kind: Deployment
+          patch: |
+            - op: add
+              path: /spec/replicas
+              value: << inputs.replicas >>
+      postBuild:
+        substitute:
+          ENV_ID: << inputs.id | quote >>
+          ENV_NAMESPACE: << $ns >>
+          GIT_BRANCH: << inputs.branch | quote >>
+          GIT_SHA: << inputs.sha | quote >>

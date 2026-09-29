@@ -15,6 +15,8 @@ spec:
     limit: 20
   defaultValues:
     tenant: demo
+    # Matches the workload's prod namespace; non-prod envs become <app>-<env>[-<branch>].
+    app: star-wars
     env: ephemeral
     replicas: 1
     repo: https://github.com/NotAwar/gitops-demo-eph-env-workload.git
