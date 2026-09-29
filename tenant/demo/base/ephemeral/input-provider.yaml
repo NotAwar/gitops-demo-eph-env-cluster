@@ -20,4 +20,3 @@ spec:
     env: ephemeral
     replicas: 1
     repo: https://github.com/NotAwar/gitops-demo-eph-env-workload.git
-    path: ./deploy/base

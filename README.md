@@ -34,11 +34,15 @@ Every matching branch in the workload repo gets its own namespace
 - a scoped `flux` ServiceAccount (namespace `admin` only)
 - `ResourceQuota` and `LimitRange` guardrails
 - a `GitRepository` pinned to the branch HEAD commit
-- a Flux `Kustomization` that builds `./deploy/base` from the workload repo and
-  applies the platform overlay (replicas, `environment` label,
-  `${ENV_ID}`, `${ENV_NAMESPACE}`, `${GIT_BRANCH}`, `${GIT_SHA}` substitutions)
+- a Flux `Kustomization` that builds the workload's env overlay `./deploy/<env>`
+  (e.g. `deploy/dev`) and applies the platform overlay on top (namespace, replicas,
+  `environment` label, `${ENV_ID}`, `${ENV_NAMESPACE}`, `${GIT_BRANCH}`, `${GIT_SHA}` substitutions)
 
 Deleting the branch deletes the namespace and everything in it.
+
+Workload repo contract: `deploy/base` plus one overlay per env (`deploy/dev`,
+`deploy/staging`, `deploy/test`, `deploy/prod`). Only `deploy/prod` may define a
+Namespace; the platform owns the namespace for all other envs.
 
 ## Bootstrap
 

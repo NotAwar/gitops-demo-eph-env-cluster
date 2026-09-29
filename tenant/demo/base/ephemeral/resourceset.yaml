@@ -109,7 +109,8 @@ spec:
       sourceRef:
         kind: GitRepository
         name: workload
-      path: << inputs.path >>
+      # Workload-owned overlay for this env, e.g. deploy/dev.
+      path: ./deploy/<< inputs.env >>
       targetNamespace: << $ns >>
       # Platform-owned environment overlay applied on top of the workload base.
       commonMetadata:
