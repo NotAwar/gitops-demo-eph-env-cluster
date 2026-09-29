@@ -5,13 +5,13 @@ Platform (cluster) repo. Application manifests live in
 
 ## Environments
 
-| Env     | Example branch   | Namespace                  | Source path   | Replicas |
-|---------|------------------|----------------------------|---------------|----------|
-| dev     | `dev/login`      | `star-wars-dev-login`      | `deploy/base` | 1        |
-| staging | `staging`        | `star-wars-staging`        | `deploy/base` | 2        |
-| staging | `staging/rc1`    | `star-wars-staging-rc1`    | `deploy/base` | 2        |
-| test    | `test`           | `star-wars-test`           | `deploy/base` | 1        |
-| prod    | `main`           | `star-wars`                | `deploy/prod` | 2        |
+| Env     | Example branch   | Namespace                  | 
+|---------|------------------|----------------------------|
+| dev     | `dev/login`      | `star-wars-dev-login`      | 
+| staging | `staging`        | `star-wars-staging`        |
+| staging | `staging/rc1`    | `star-wars-staging-rc1`    |
+| test    | `test`           | `star-wars-test`           |
+| prod    | `main`           | `star-wars`                |
 
 ## Layout
 
@@ -40,9 +40,6 @@ Every matching branch in the workload repo gets its own namespace
 
 Deleting the branch deletes the namespace and everything in it.
 
-Workload repo contract: a namespace-agnostic kustomize base at `deploy/base`
-and a prod overlay at `deploy/prod`.
-
 ## Bootstrap
 
 ```sh
@@ -50,12 +47,4 @@ kind create cluster --config kind/cluster.yaml
 helm install flux-operator oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator \
   --namespace flux-system --create-namespace --wait
 kubectl apply -f clusters/kind/flux-system/flux-instance.yaml
-```
-
-Inspect:
-
-```sh
-flux-operator get instance flux -n flux-system
-kubectl -n demo-dev get resourcesetinputprovider,resourceset
-kubectl get ns -l ephemeral=true
 ```

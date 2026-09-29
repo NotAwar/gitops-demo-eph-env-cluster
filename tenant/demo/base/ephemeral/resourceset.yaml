@@ -8,9 +8,9 @@ metadata:
   namespace: demo-ephemeral
 spec:
   inputsFrom:
-    - apiVersion: fluxcd.controlplane.io/v1
-      kind: ResourceSetInputProvider
-      name: workload-branches
+  - apiVersion: fluxcd.controlplane.io/v1
+    kind: ResourceSetInputProvider
+    name: workload-branches
   resourcesTemplate: |
     <<- $suffix := lower (regexReplaceAll "^[^/]+/?" inputs.branch "") >>
     <<- $suffix = trimAll "-" (regexReplaceAll "[^a-z0-9]+" $suffix "-") >>
