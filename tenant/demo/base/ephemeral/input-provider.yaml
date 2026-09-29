@@ -10,6 +10,9 @@ metadata:
 spec:
   type: GitHubBranch
   url: https://github.com/NotAwar/gitops-demo-eph-env-workload
+  # Created out-of-band (see README); avoids GitHub's 60 req/h unauthenticated limit.
+  secretRef:
+    name: github-auth
   filter:
     includeBranch: "^$"
     limit: 20

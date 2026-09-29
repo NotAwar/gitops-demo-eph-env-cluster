@@ -52,3 +52,13 @@ helm install flux-operator oci://ghcr.io/controlplaneio-fluxcd/charts/flux-opera
   --namespace flux-system --create-namespace --wait
 kubectl apply -f clusters/kind/flux-system/flux-instance.yaml
 ```
+
+GitHub token for branch discovery (read-only access to the workload repo is enough):
+
+```sh
+for ns in demo-dev demo-staging demo-test
+  kubectl create ns $ns --dry-run=client -o yaml | kubectl apply -f -
+  echo $GITHUB_TOKEN | flux-operator -n $ns create secret basic-auth github-auth \
+    --username=flux --password-stdin
+end
+```
