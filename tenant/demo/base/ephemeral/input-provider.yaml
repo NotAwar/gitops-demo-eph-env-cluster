@@ -6,7 +6,7 @@ metadata:
   name: workload-branches
   namespace: demo-ephemeral
   annotations:
-    fluxcd.controlplane.io/reconcileEvery: "5m"
+    fluxcd.controlplane.io/reconcileEvery: "1m"
 spec:
   type: GitHubBranch
   url: https://github.com/NotAwar/gitops-demo-eph-env-workload
