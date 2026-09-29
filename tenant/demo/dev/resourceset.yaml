@@ -1,0 +1,117 @@
+# Renders an isolated ephemeral environment for every dev/* branch of the workload repo.
+# Deleting the branch garbage-collects the whole namespace.
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: workload-dev-envs
+  namespace: demo-dev
+spec:
+  inputsFrom:
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSetInputProvider
+      name: workload-dev-branches
+  resources:
+    - apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: << inputs.tenant >>-dev-<< inputs.id >>
+        labels:
+          tenant: << inputs.tenant | quote >>
+          environment: dev
+          ephemeral: "true"
+        annotations:
+          fluxcd.controlplane.io/branch: << inputs.branch | quote >>
+          fluxcd.controlplane.io/commit: << inputs.sha | quote >>
+    - apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: flux
+        namespace: << inputs.tenant >>-dev-<< inputs.id >>
+    - apiVersion: rbac.authorization.k8s.io/v1
+      kind: RoleBinding
+      metadata:
+        name: flux
+        namespace: << inputs.tenant >>-dev-<< inputs.id >>
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: admin
+      subjects:
+        - kind: ServiceAccount
+          name: flux
+          namespace: << inputs.tenant >>-dev-<< inputs.id >>
+    - apiVersion: v1
+      kind: ResourceQuota
+      metadata:
+        name: ephemeral-quota
+        namespace: << inputs.tenant >>-dev-<< inputs.id >>
+      spec:
+        hard:
+          requests.cpu: "1"
+          requests.memory: 1Gi
+          limits.cpu: "2"
+          limits.memory: 2Gi
+          pods: "10"
+          services.loadbalancers: "0"
+    - apiVersion: v1
+      kind: LimitRange
+      metadata:
+        name: ephemeral-defaults
+        namespace: << inputs.tenant >>-dev-<< inputs.id >>
+      spec:
+        limits:
+          - type: Container
+            default:
+              cpu: 200m
+              memory: 256Mi
+            defaultRequest:
+              cpu: 50m
+              memory: 64Mi
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: GitRepository
+      metadata:
+        name: workload
+        namespace: << inputs.tenant >>-dev-<< inputs.id >>
+      spec:
+        interval: 10m
+        url: << inputs.repo >>
+        ref:
+          commit: << inputs.sha >>
+    - apiVersion: kustomize.toolkit.fluxcd.io/v1
+      kind: Kustomization
+      metadata:
+        name: workload
+        namespace: << inputs.tenant >>-dev-<< inputs.id >>
+        annotations:
+          event.toolkit.fluxcd.io/branch: << inputs.branch | quote >>
+          event.toolkit.fluxcd.io/commit: << inputs.sha | quote >>
+      spec:
+        serviceAccountName: flux
+        interval: 10m
+        retryInterval: 1m
+        timeout: 3m
+        prune: true
+        wait: true
+        sourceRef:
+          kind: GitRepository
+          name: workload
+        path: << inputs.path >>
+        targetNamespace: << inputs.tenant >>-dev-<< inputs.id >>
+        # Platform-owned dev overlay applied on top of the workload base.
+        commonMetadata:
+          labels:
+            environment: dev
+            ephemeral: "true"
+        patches:
+          - target:
+              kind: Deployment
+            patch: |
+              - op: add
+                path: /spec/replicas
+                value: 1
+        postBuild:
+          substitute:
+            ENV_ID: << inputs.id | quote >>
+            ENV_NAMESPACE: << inputs.tenant >>-dev-<< inputs.id >>
+            GIT_BRANCH: << inputs.branch | quote >>
+            GIT_SHA: << inputs.sha | quote >>
