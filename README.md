@@ -11,6 +11,7 @@ Platform (cluster) repo. Application manifests live in
 | staging | `staging`        | `star-wars-staging`        |
 | staging | `staging/rc1`    | `star-wars-staging-rc1`    |
 | test    | `test`           | `star-wars-test`           |
+| test    | `test/add-vader` | `star-wars-test-add-vader` |
 | prod    | `main`           | `star-wars`                |
 
 ## Layout

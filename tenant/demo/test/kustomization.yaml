@@ -1,4 +1,4 @@
-# Environment for the workload repo's `test` branch.
+# One environment per test branch (test or test/*).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: demo-test
@@ -15,7 +15,7 @@ patches:
   patch: |
     - op: replace
       path: /spec/filter/includeBranch
-      value: "^test$"
+      value: "^test(/.+)?$"
     - op: replace
       path: /spec/defaultValues/env
       value: test
