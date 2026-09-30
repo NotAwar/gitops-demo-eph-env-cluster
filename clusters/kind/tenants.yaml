@@ -61,3 +61,19 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tenant-demo-pr
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  path: ./tenant/demo/pr
+  prune: true
+  wait: true
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system

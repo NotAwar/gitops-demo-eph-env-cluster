@@ -1,0 +1,26 @@
+# One ephemeral environment per open pull request in the workload repo.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: demo-pr
+resources:
+- ../base/ephemeral
+labels:
+- pairs:
+    environment: pr
+  includeSelectors: false
+patches:
+- target:
+    kind: ResourceSetInputProvider
+    name: workload-branches
+  patch: |
+    - op: replace
+      path: /spec/type
+      value: GitHubPullRequest
+    - op: remove
+      path: /spec/filter/includeBranch
+    - op: replace
+      path: /spec/defaultValues/env
+      value: pr
+    - op: replace
+      path: /spec/defaultValues/replicas
+      value: 1

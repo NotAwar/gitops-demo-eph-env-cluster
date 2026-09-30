@@ -12,6 +12,7 @@ Platform (cluster) repo. Application manifests live in
 | staging | `staging/rc1`    | `star-wars-staging-rc1`    |
 | test    | `test`           | `star-wars-test`           |
 | test    | `test/add-vader` | `star-wars-test-add-vader` |
+| pr      | PR #7 (any branch) | `star-wars-pr-7`         |
 | prod    | `main`           | `star-wars`                |
 
 ## Layout
@@ -24,6 +25,7 @@ tenant/demo/base/ephemeral/                   # shared branch-per-env machinery 
 tenant/demo/dev/                              # overlay: dev/* branches
 tenant/demo/staging/                          # overlay: staging branches
 tenant/demo/test/                             # overlay: test branch
+tenant/demo/pr/                               # overlay: open pull requests
 tenant/demo/prod/                             # static env tracking main with the workload prod overlay
 ```
 
@@ -41,6 +43,13 @@ Every matching branch in the workload repo gets its own namespace
 
 Deleting the branch deletes the namespace and everything in it.
 
+## Pull request environments
+
+Every open pull request gets `<app>-pr-<number>`, pinned to the PR head commit.
+The overlay is chosen from the head branch prefix (`dev/*` -> `deploy/dev`,
+`test/*` -> `deploy/test`, `staging*` -> `deploy/staging`, anything else -> `deploy/dev`).
+Closing or merging the PR deletes the namespace.
+
 Workload repo contract: `deploy/base` plus one overlay per env (`deploy/dev`,
 `deploy/staging`, `deploy/test`, `deploy/prod`). Only `deploy/prod` may define a
 Namespace; the platform owns the namespace for all other envs.
@@ -57,7 +66,7 @@ kubectl apply -f clusters/kind/flux-system/flux-instance.yaml
 GitHub token for branch discovery (read-only access to the workload repo is enough):
 
 ```sh
-for ns in demo-dev demo-staging demo-test
+for ns in demo-dev demo-staging demo-test demo-pr
   kubectl create ns $ns --dry-run=client -o yaml | kubectl apply -f -
   echo $GITHUB_TOKEN | flux-operator -n $ns create secret basic-auth github-auth \
     --username=flux --password-stdin
