@@ -4,6 +4,7 @@ kind: Kustomization
 namespace: demo-dev
 resources:
 - ../base/ephemeral
+- secret.yaml
 labels:
 - pairs:
     environment: dev
